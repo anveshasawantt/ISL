@@ -11,97 +11,7 @@ MODEL_PATH = r"D:\ISL PROJECT\isl_video_model.pkl"
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-class WordBuilder:
-    def __init__(self, confidence_threshold=0.35, stability_duration=1.0):
-        self.confidence_threshold = confidence_threshold
-        self.stability_duration = stability_duration
-        
-        self.current_word = ""
-        self.full_sentence = ""
-        
-        self.tracking_letter = None
-        self.tracking_start_time = 0
-        
-        self.last_committed_letter = None
-        self.last_hand_time = time.time()
-        self.last_gap_duration = 0.0
-        
-        self.hand_was_visible = False
-        self.space_added = True
 
-    def process_frame(self, letter, confidence, hand_detected=True):
-        current_time = time.time()
-        
-        if not hand_detected or confidence < self.confidence_threshold:
-            if self.hand_was_visible:
-                self.hand_was_visible = False
-                self.tracking_letter = None # Reset tracking when hand drops
-                
-            gap_duration = current_time - self.last_hand_time
-            
-            # Gap > 2.0s -> insert space
-            if gap_duration > 2.0 and not self.space_added:
-                if self.current_word:
-                    self.full_sentence += self.current_word + " "
-                    self.current_word = ""
-                else:
-                    if not self.full_sentence.endswith(" "):
-                        self.full_sentence += " "
-                self.space_added = True
-                self.last_committed_letter = None
-            return
-            
-        # Hand is detected with high confidence
-        if not self.hand_was_visible:
-            # Hand just reappeared, record how long it was gone
-            self.last_gap_duration = current_time - self.last_hand_time
-            self.hand_was_visible = True
-            self.space_added = False
-            
-        self.last_hand_time = current_time
-        
-        # Debouncing and tracking
-        if letter != self.tracking_letter:
-            self.tracking_letter = letter
-            self.tracking_start_time = current_time
-        else:
-            tracking_duration = current_time - self.tracking_start_time
-            
-            # Check if letter has been stable for ~1 second
-            if tracking_duration >= self.stability_duration:
-                if letter != self.last_committed_letter:
-                    # New letter, commit it
-                    self._commit_letter(letter)
-                    self.tracking_start_time = current_time # Reset to avoid rapid-fire
-                else:
-                    # Same letter as last committed. Check gap duration.
-                    if self.last_gap_duration >= 0.3:
-                        # Gap 0.3s+ -> potential double letter or new letter
-                        self._commit_letter(letter)
-                        self.tracking_start_time = current_time
-                        self.last_gap_duration = 0.0 # Consume gap
-                    else:
-                        # Gap < 0.3s -> ignore, still signing the same letter
-                        self.tracking_start_time = current_time
-
-    def _commit_letter(self, letter):
-        self.current_word += letter
-        self.last_committed_letter = letter
-        
-    def delete_last(self):
-        if len(self.current_word) > 0:
-            self.current_word = self.current_word[:-1]
-            self.last_committed_letter = self.current_word[-1] if self.current_word else None
-            self.last_gap_duration = 0.0
-        elif len(self.full_sentence) > 0:
-            self.full_sentence = self.full_sentence[:-1]
-            
-    def get_state(self):
-        return {
-            "word": self.current_word,
-            "sentence": self.full_sentence,
-            "display_text": self.full_sentence + self.current_word
-        }
 
 def calculate_angle(p1, p2, p3):
     # Calculate angle between three points (p2 is the vertex)
@@ -177,8 +87,7 @@ def run_realtime():
     
     print("Starting webcam... Press 'q' to quit. Press 'Backspace' to delete last character.")
     
-    word_builder = WordBuilder(confidence_threshold=0.45, stability_duration=0.85)
-    
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -212,49 +121,23 @@ def run_realtime():
             top_pred = model.classes_[np.argmax(probs)]
             confidence = np.max(probs)
             
-        word_builder.process_frame(top_pred, confidence, hand_detected)
-        state = word_builder.get_state()
-            
-        h, w = frame.shape[:2]
-        
-        # Add a black semi-transparent bar at top
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (0, 0), (w, 180), (0, 0, 0), -1)
-        cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
-
         # Display prediction
-        live_letter = top_pred if confidence >= 0.45 and hand_detected else ""
-        cv2.putText(frame, f"Live: {live_letter} ({int(confidence * 100)}%)", (20, 40), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
-        cv2.putText(frame, f"Word: {state['word']}", (20, 80), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 0), 2)
+        live_letter = top_pred if confidence >= 0.30 and hand_detected else ""
+        cv2.putText(frame, f"Letter: {live_letter} ({int(confidence * 100)}%)", (20, 60), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 2)
                     
-        display_sentence = state['sentence'][-30:] if len(state['sentence']) > 30 else state['sentence']
-        cv2.putText(frame, f"Sentence: {display_sentence}", (20, 120), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
-                    
-        if word_builder.tracking_letter and hand_detected:
-            progress = min(100, int((time.time() - word_builder.tracking_start_time) / 0.85 * 100))
-            cv2.putText(frame, f"Holding: {word_builder.tracking_letter} {progress}%", (20, 160), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
-                        
         # Controls bar at bottom
+        h, w = frame.shape[:2]
         cv2.rectangle(frame, (0, h-40), (w, h), (0,0,0), -1)
-        cv2.putText(frame, "Q=Quit | C=Clear | Bksp=Delete", 
+        cv2.putText(frame, "Q = Quit", 
                     (10, h-15), cv2.FONT_HERSHEY_SIMPLEX, 
                     0.6, (255,255,255), 1)
                             
-        cv2.imshow('ISL Word Builder', frame)
+        cv2.imshow('ISL Realtime', frame)
         
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
-        elif key == 8: # Backspace
-            word_builder.delete_last()
-        elif key == ord('c'):
-            word_builder.current_word = ""
-            word_builder.full_sentence = ""
-            word_builder.last_committed_letter = None
             
     cap.release()
     cv2.destroyAllWindows()
