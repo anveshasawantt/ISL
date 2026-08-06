@@ -6,7 +6,7 @@ import joblib
 import os
 import time
 
-MODEL_PATH = r"C:\ISL PROJECT\data\isl_numbers_model.pkl"
+MODEL_PATH = r"D:\ISL PROJECT\ISL Numbers\data\isl_numbers_model.pkl"
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils

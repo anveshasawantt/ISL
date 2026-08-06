@@ -2,7 +2,7 @@ import os
 import cv2
 
 # Update this path to your actual dataset directory
-DATASET_PATH = r"C:\ISL PROJECT\Numbers"
+DATASET_PATH = r"D:\ISL PROJECT\ISLNumbers\data"
 
 def check_dataset(dataset_path):
     if not os.path.exists(dataset_path):
