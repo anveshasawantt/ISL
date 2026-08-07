@@ -79,14 +79,23 @@ def run_realtime():
     hands = mp_hands.Hands(
         static_image_mode=False,
         max_num_hands=2,
-        min_detection_confidence=0.3,
-        min_tracking_confidence=0.3
+        min_detection_confidence=0.7,
+        min_tracking_confidence=0.5
     )
     
     cap = cv2.VideoCapture(0)
     
     print("Starting webcam... Press 'q' to quit. Press 'Backspace' to delete last character.")
     
+    landmark_style = mp_drawing.DrawingSpec(
+        color=(0, 0, 255),    # red dots
+        thickness=2,
+        circle_radius=4
+    )
+    connection_style = mp_drawing.DrawingSpec(
+        color=(255, 255, 255),  # white lines
+        thickness=2
+    )
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -105,9 +114,7 @@ def run_realtime():
         
         if results.multi_hand_landmarks:
             hand_detected = True
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                
+            
             if len(results.multi_hand_landmarks) == 2:
                 features_hand1 = extract_features(results.multi_hand_landmarks[0])
                 features_hand2 = extract_features(results.multi_hand_landmarks[1])
@@ -121,19 +128,39 @@ def run_realtime():
             top_pred = model.classes_[np.argmax(probs)]
             confidence = np.max(probs)
             
-        # Display prediction
-        live_letter = top_pred if confidence >= 0.30 and hand_detected else ""
-        cv2.putText(frame, f"Letter: {live_letter} ({int(confidence * 100)}%)", (20, 60), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 2)
-                    
-        # Controls bar at bottom
+        # 1. Draw hand landmarks on original frame first
+        if results and results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                mp_drawing.draw_landmarks(
+                    frame,
+                    hand_landmarks,
+                    mp_hands.HAND_CONNECTIONS,
+                    landmark_style,
+                    connection_style
+                )
+                
         h, w = frame.shape[:2]
-        cv2.rectangle(frame, (0, h-40), (w, h), (0,0,0), -1)
-        cv2.putText(frame, "Q = Quit", 
-                    (10, h-15), cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.6, (255,255,255), 1)
+        
+        # 2. Add black bar at top using overlay
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, 0), (w, 90), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.85, frame, 0.15, 0, frame)
+        
+        # 3. Put text on the bar
+        if hand_detected and confidence >= 0.30:
+            text = f"Sign: {top_pred}    {int(confidence * 100)}%"
+        else:
+            text = "Sign: -"
+            
+        cv2.putText(frame, text, (20, 65), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 2.0, (0, 255, 0), 3)
+                    
+        # 4. Add bottom bar
+        cv2.rectangle(frame, (0, h-35), (w, h), (0, 0, 0), -1)
+        cv2.putText(frame, "Press Q to quit", (10, h-10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
                             
-        cv2.imshow('ISL Realtime', frame)
+        cv2.imshow('ISL to Text - Real Time', frame)
         
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
