@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #FBF9F5;
+    --pastel-lavender: #E8E5FA;
+    --pastel-peach: #FFE5D9;
+    --pastel-mint: #D8F3DC;
+    --pastel-sky: #DDF0FF;
+    --pastel-butter: #FFF3C4;
+    --pastel-rose: #FFD6E0;
+    --pastel-card: #FFFFFF;
+    --border-color: #1A1A24;
+    --shadow-color: #2D3142;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: #1A1A24;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  .font-mono {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+}
+
+/* Refined Soft-Brutalist & Pastel Utility Classes */
+.nb-box {
+  border: 2.5px solid #1A1A24;
+  box-shadow: 4px 4px 0px #1A1A24;
+  border-radius: 10px;
+}
+
+.nb-box-sm {
+  border: 2px solid #1A1A24;
+  box-shadow: 3px 3px 0px #1A1A24;
+  border-radius: 8px;
+}
+
+.nb-btn {
+  border: 2.5px solid #1A1A24;
+  box-shadow: 3.5px 3.5px 0px #1A1A24;
+  border-radius: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  transition: all 0.12s ease;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.nb-btn:hover:not(:disabled) {
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 5px 5px 0px #1A1A24;
+}
+
+.nb-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #1A1A24;
+}
+
+.nb-btn:focus-visible {
+  outline: 3px solid #7B88FF;
+  outline-offset: 2px;
+}
+
+.nb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: 1.5px 1.5px 0px #1A1A24;
+}
+
+/* Subtle Striped Hatch Pattern for Locked / Coming Soon */
+.hatch-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    #F1F0F5,
+    #F1F0F5 10px,
+    #E4E3EC 10px,
+    #E4E3EC 20px
+  );
+}
